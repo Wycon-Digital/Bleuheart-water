@@ -364,25 +364,52 @@
     </div>
   </div>
 
-  <script>// Replace the existing script content with this updated version
+  <script>// Enhanced sales tracking system with detailed analytics
 let cart = [];
 let selectedPaymentMethod = '';
 let salesData = {
+  metadata: {
+    lastUpdated: '',
+    version: '2.0',
+    location: '', // Will be set based on login
+    businessName: 'Bleuheart Water'
+  },
   dailyLogs: {},
-  transactions: []
+  transactions: [],
+  analytics: {
+    monthlyTotals: {},
+    paymentMethodStats: {
+      cash: { total: 0, count: 0 },
+      mpesa: { total: 0, count: 0 }
+    },
+    containerStats: {
+      '20L': { total: 0, revenue: 0 },
+      '10L': { total: 0, revenue: 0 },
+      '5L': { total: 0, revenue: 0 },
+      '1L': { total: 0, revenue: 0 }
+    }
+  }
 };
+
+// Enhanced daily sales tracking
 let dailySales = {
+  date: new Date().toISOString().split('T')[0],
   totalAmount: 0,
   transactions: 0,
   salesBySize: {
-    '20': { quantity: 0, amount: 0 },
-    '10': { quantity: 0, amount: 0 },
-    '5': { quantity: 0, amount: 0 },
-    '1': { quantity: 0, amount: 0 }
+    '20': { quantity: 0, amount: 0, returns: 0 },
+    '10': { quantity: 0, amount: 0, returns: 0 },
+    '5': { quantity: 0, amount: 0, returns: 0 },
+    '1': { quantity: 0, amount: 0, returns: 0 }
   },
   paymentMethods: {
     cash: { count: 0, amount: 0 },
     mpesa: { count: 0, amount: 0 }
+  },
+  hourlyBreakdown: {},
+  operationalHours: {
+    start: '',
+    end: ''
   }
 };
 
@@ -392,9 +419,43 @@ const GITHUB_CONFIG = {
   path: 'sales_data.json',
   branch: 'main'
 };
+
+// Location-specific pricing
+const LOCATION_PRICES = {
+  'pavilion': {
+    '20': 100,
+    '10': 50,
+    '5': 25,
+    '1': 10
+  },
+  'avenue': {
+    '20': 100,
+    '10': 50,
+    '5': 25,
+    '1': 10
+  },
+  'tudor': {
+    '20': 100,
+    '10': 50,
+    '5': 25,
+    '1': 10
+  },
+  'bleuheart': {
+    '20': 100,
+    '10': 50,
+    '5': 25,
+    '1': 10
+  }
+};
+
+// Enhanced user authentication
 const users = {
-  'pavilion':'0900'
-    };
+  'pavilion': { password: '0900', role: 'operator', location: 'Pavilion Branch' },
+  'avenue': { password: '6201', role: 'operator', location: 'Avenue Branch' },
+  'tudor': { password: '0900', role: 'operator', location: 'Tudor Branch' },
+  'bleuheart': { password: '0900620123', role: 'admin', location: 'Main Branch' }
+};
+
 async function getGitHubToken() {
   let token = localStorage.getItem('github_token');
   if (!token) {
@@ -402,7 +463,7 @@ async function getGitHubToken() {
     if (token) {
       localStorage.setItem('github_token', token);
     } else {
-      throw new Error('GitHub token is required');
+      throw new Error('GitHub token is required for data synchronization');
     }
   }
   return token;
@@ -422,14 +483,35 @@ async function loadSalesData() {
       const data = await response.json();
       salesData = data;
       const today = new Date().toISOString().split('T')[0];
-      if (salesData.dailyLogs[today]) {
-        dailySales = salesData.dailyLogs[today];
+      
+      // Initialize today's data if not exists
+      if (!salesData.dailyLogs[today]) {
+        salesData.dailyLogs[today] = {
+          ...dailySales,
+          operationalHours: {
+            start: new Date().toISOString()
+          }
+        };
       }
+      
+      dailySales = salesData.dailyLogs[today];
       updateDailySummary();
+      initializeHourlyTracking();
     }
   } catch (error) {
     console.error('Error loading sales data:', error);
-    alert('Failed to load sales data from GitHub. Starting with empty data.');
+    handleOfflineMode();
+  }
+}
+
+function initializeHourlyTracking() {
+  const currentHour = new Date().getHours();
+  if (!dailySales.hourlyBreakdown[currentHour]) {
+    dailySales.hourlyBreakdown[currentHour] = {
+      sales: 0,
+      transactions: 0,
+      timestamp: new Date().toISOString()
+    };
   }
 }
 
@@ -437,8 +519,20 @@ async function saveSalesData() {
   try {
     const token = await getGitHubToken();
     const today = new Date().toISOString().split('T')[0];
-    salesData.dailyLogs[today] = dailySales;
     
+    // Update metadata
+    salesData.metadata.lastUpdated = new Date().toISOString();
+    salesData.metadata.location = users[document.getElementById('username').value].location;
+    
+    // Update daily logs
+    salesData.dailyLogs[today] = {
+      ...dailySales,
+      operationalHours: {
+        ...dailySales.operationalHours,
+        end: new Date().toISOString()
+      }
+    };
+
     // Get current file SHA
     const currentFile = await fetch(`https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${GITHUB_CONFIG.path}`, {
       headers: {
@@ -457,7 +551,7 @@ async function saveSalesData() {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        message: `Update sales data - ${new Date().toISOString()}`,
+        message: `Update sales data - ${new Date().toISOString()} - ${salesData.metadata.location}`,
         content: content,
         sha: fileData.sha,
         branch: GITHUB_CONFIG.branch
@@ -467,13 +561,15 @@ async function saveSalesData() {
     if (!response.ok) {
       throw new Error('Failed to save to GitHub');
     }
+
+    // Backup to localStorage
+    localStorage.setItem('salesData_backup', JSON.stringify(salesData));
   } catch (error) {
     console.error('Error saving sales data:', error);
-    alert('Failed to save to GitHub. Please try again or contact support.');
+    handleOfflineMode();
   }
 }
 
-// Modify the existing checkout function
 async function checkout() {
   if (cart.length === 0) {
     alert('Cart is empty!');
@@ -484,42 +580,84 @@ async function checkout() {
     return;
   }
 
-  let total = cart.reduce((sum, item) => sum + item.total, 0);
+  const total = cart.reduce((sum, item) => sum + item.total, 0);
+  const currentHour = new Date().getHours();
+  const username = document.getElementById('username').value;
+  
+  // Update daily sales
   dailySales.totalAmount += total;
   dailySales.transactions += 1;
 
+  // Update hourly breakdown
+  if (!dailySales.hourlyBreakdown[currentHour]) {
+    dailySales.hourlyBreakdown[currentHour] = {
+      sales: 0,
+      transactions: 0,
+      timestamp: new Date().toISOString()
+    };
+  }
+  dailySales.hourlyBreakdown[currentHour].sales += total;
+  dailySales.hourlyBreakdown[currentHour].transactions += 1;
+
+  // Update container stats
   cart.forEach(item => {
     dailySales.salesBySize[item.liters].quantity += item.quantity;
     dailySales.salesBySize[item.liters].amount += item.total;
+    
+    // Update analytics
+    salesData.analytics.containerStats[`${item.liters}L`].total += item.quantity;
+    salesData.analytics.containerStats[`${item.liters}L`].revenue += item.total;
   });
 
+  // Update payment method stats
   dailySales.paymentMethods[selectedPaymentMethod].count += 1;
   dailySales.paymentMethods[selectedPaymentMethod].amount += total;
+  salesData.analytics.paymentMethodStats[selectedPaymentMethod].total += total;
+  salesData.analytics.paymentMethodStats[selectedPaymentMethod].count += 1;
 
+  // Create transaction record
   const transaction = {
+    id: generateTransactionId(),
     items: [...cart],
     total: total,
     paymentMethod: selectedPaymentMethod,
     timestamp: new Date().toISOString(),
-    username: document.getElementById('username').value
+    location: users[username].location,
+    operator: username
   };
 
   salesData.transactions.push(transaction);
   
   try {
     await saveSalesData();
-    alert(`Sale completed!\nTotal amount: Ksh ${total}\nPayment Method: ${selectedPaymentMethod.toUpperCase()}`);
-    cart = [];
-    selectedPaymentMethod = '';
-    document.querySelectorAll('.payment-btn').forEach(btn => btn.classList.remove('selected'));
-    updateCart();
+    alert(`Sale completed!\nTotal amount: Ksh ${total}\nPayment Method: ${selectedPaymentMethod.toUpperCase()}\nTransaction ID: ${transaction.id}`);
+    resetCart();
     updateDailySummary();
   } catch (error) {
-    alert('Error saving sale. Please try again or contact support.');
+    alert('Error processing sale. Data saved locally.');
+    handleOfflineMode();
   }
 }
 
-// Modify the DOMContentLoaded event listener
+function resetCart() {
+  cart = [];
+  selectedPaymentMethod = '';
+  document.querySelectorAll('.payment-btn').forEach(btn => btn.classList.remove('selected'));
+  updateCart();
+}
+
+function generateTransactionId() {
+  return `TXN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+}
+
+function handleOfflineMode() {
+  localStorage.setItem('offlineData', JSON.stringify({
+    dailySales,
+    pendingTransactions: salesData.transactions
+  }));
+}
+
+// Initialize application
 document.addEventListener('DOMContentLoaded', async function() {
   await loadSalesData();
   document.getElementById('enter-sale-btn').addEventListener('click', toggleProductList);
@@ -527,6 +665,15 @@ document.addEventListener('DOMContentLoaded', async function() {
   updateDailySummary();
   document.querySelector('.container').style.display = 'none';
   setInterval(updateDateTime, 1000);
+  
+  // Check for offline data
+  const offlineData = localStorage.getItem('offlineData');
+  if (offlineData) {
+    const shouldSync = confirm('Found offline data. Would you like to sync it now?');
+    if (shouldSync) {
+      await syncOfflineData(JSON.parse(offlineData));
+    }
+  }
 });</script>
 </body>
 </html>
