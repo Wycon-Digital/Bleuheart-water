@@ -365,21 +365,125 @@
   </div>
   <script>
     function initializeApp() {
-      loadSalesData();
-      document.getElementById('enter-sale-btn').addEventListener('click', toggleProductList);
-      updateDateTime();
-      updateDailySummary();
+      // Show login screen by default
+      document.getElementById('login-screen').style.display = 'flex';
       document.querySelector('.container').style.display = 'none';
-      setInterval(updateDateTime, 1000);
+    }
+
+    function login() {
+      const username = document.getElementById('username').value.toLowerCase();
+      const password = document.getElementById('password').value;
       
-      // Check for offline data
-      const offlineData = localStorage.getItem('offlineData');
-      if (offlineData) {
-        const shouldSync = confirm('Found offline data. Would you like to sync it now?');
-        if (shouldSync) {
-          syncOfflineData(JSON.parse(offlineData));
-        }
+      if (!username || !password) {
+        alert('Please enter both username and password');
+        return;
       }
+
+      if (users[username] && users[username].password === password) {
+        // Hide login screen
+        document.getElementById('login-screen').style.display = 'none';
+        // Show main container
+        document.querySelector('.container').style.display = 'block';
+        
+        // Initialize the app after successful login
+        loadSalesData();
+        document.getElementById('enter-sale-btn').addEventListener('click', toggleProductList);
+        updateDateTime();
+        updateDailySummary();
+        setInterval(updateDateTime, 1000);
+        
+        // Check for offline data
+        const offlineData = localStorage.getItem('offlineData');
+        if (offlineData) {
+          const shouldSync = confirm('Found offline data. Would you like to sync it now?');
+          if (shouldSync) {
+            syncOfflineData(JSON.parse(offlineData));
+          }
+        }
+      } else {
+        alert('Invalid username or password');
+      }
+    }
+
+    // Add function to update date and time
+    function updateDateTime() {
+      const now = new Date();
+      document.getElementById('current-date').textContent = now.toLocaleDateString();
+      document.getElementById('current-time').textContent = now.toLocaleTimeString();
+    }
+
+    // Add function to toggle product list
+    function toggleProductList() {
+      const productList = document.getElementById('product-list');
+      productList.style.display = productList.style.display === 'none' ? 'flex' : 'none';
+    }
+
+    // Add function to update cart display
+    function updateCart() {
+      const cartItems = document.getElementById('cart-items');
+      const totalElement = document.getElementById('total');
+      let cartHtml = '';
+      let total = 0;
+
+      cart.forEach((item, index) => {
+        cartHtml += `
+          <div class="cart-item">
+            <span>${item.liters}L x ${item.quantity}</span>
+            <span>Ksh ${item.total}</span>
+            <button onclick="removeFromCart(${index})">Remove</button>
+          </div>
+        `;
+        total += item.total;
+      });
+
+      cartItems.innerHTML = cartHtml;
+      totalElement.innerHTML = `<strong>Total: Ksh ${total}</strong>`;
+    }
+
+    // Add function to update daily summary
+    function updateDailySummary() {
+      document.getElementById('total-sales').textContent = dailySales.totalAmount;
+      document.getElementById('total-transactions').textContent = dailySales.transactions;
+      
+      let sizeHtml = '<h3>Sales by Container Size:</h3>';
+      for (const [size, data] of Object.entries(dailySales.salesBySize)) {
+        sizeHtml += `<p>${size}L: ${data.quantity} units (Ksh ${data.amount})</p>`;
+      }
+      document.getElementById('sales-by-size').innerHTML = sizeHtml;
+
+      let paymentHtml = '<h3>Sales by Payment Method:</h3>';
+      for (const [method, data] of Object.entries(dailySales.paymentMethods)) {
+        paymentHtml += `<p>${method.toUpperCase()}: ${data.count} transactions (Ksh ${data.amount})</p>`;
+      }
+      document.getElementById('sales-by-payment').innerHTML = paymentHtml;
+    }
+
+    function selectPaymentMethod(method) {
+      selectedPaymentMethod = method;
+      document.querySelectorAll('.payment-btn').forEach(btn => {
+        btn.classList.remove('selected');
+      });
+      event.target.classList.add('selected');
+    }
+
+    function addToCart(liters, price) {
+      const quantity = parseInt(document.getElementById(`qty${liters}`).value);
+      if (quantity > 0) {
+        cart.push({
+          liters,
+          quantity,
+          price,
+          total: quantity * price
+        });
+        updateCart();
+        document.getElementById(`qty${liters}`).value = "0";
+      }
+    }
+
+    function removeFromCart(index) {
+      cart.splice(index, 1);
+      updateCart();
+    }
     }
 let cart = [];
 let selectedPaymentMethod = '';
