@@ -230,7 +230,7 @@
     }
   </style>
 </head>
-<body onload="loadsalesdata()">
+<body onload="initializeApp()">
   <div id="login-screen" class="login-container">
     <div class="login-box">
       <h2>Login</h2>
@@ -363,8 +363,24 @@
       </div>
     </div>
   </div>
-
-  <script>// Enhanced sales tracking system with detailed analytics
+  <script>
+    function initializeApp() {
+      loadSalesData();
+      document.getElementById('enter-sale-btn').addEventListener('click', toggleProductList);
+      updateDateTime();
+      updateDailySummary();
+      document.querySelector('.container').style.display = 'none';
+      setInterval(updateDateTime, 1000);
+      
+      // Check for offline data
+      const offlineData = localStorage.getItem('offlineData');
+      if (offlineData) {
+        const shouldSync = confirm('Found offline data. Would you like to sync it now?');
+        if (shouldSync) {
+          syncOfflineData(JSON.parse(offlineData));
+        }
+      }
+    }
 let cart = [];
 let selectedPaymentMethod = '';
 let salesData = {
