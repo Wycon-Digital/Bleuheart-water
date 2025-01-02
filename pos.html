@@ -4,7 +4,153 @@
   <meta charset="UTF-8">
   <title>Water Refill Station POS</title>
   <style>
-    /* Add your custom styles here */
+    <title>Water Refill Station POS</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #f0f8ff;
+    }
+    
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    .header {
+      text-align: center;
+      padding: 20px;
+      background: #007bff;
+      color: white;
+      border-radius: 5px;
+      margin-bottom: 20px;
+    }
+    .products {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    .product {
+      display: grid;
+      grid-template-columns: auto 1fr auto auto auto;
+      align-items: center;
+      gap: 20px;
+      border: 1px solid #ddd;
+      padding: 15px;
+      border-radius: 5px;
+      background: white;
+      transition: transform 0.2s;
+    }
+    .product:hover {
+      transform: scale(1.01);
+    }
+    .water-icon {
+      width: 40px;
+      height: 40px;
+    }
+    .quantity-input {
+      width: 80px;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      text-align: center;
+      -moz-appearance: textfield;
+      appearance: none;
+    }
+    .quantity-input::-webkit-outer-spin-button,
+    .quantity-input::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    .add-btn {
+      background: #28a745;
+      color: white;
+      border: none;
+      padding: 8px 15px;
+      border-radius: 5px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .cart {
+      border: 1px solid #ddd;
+      padding: 20px;
+      border-radius: 5px;
+      background: white;
+    }
+    .cart-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid #eee;
+    }
+    .checkout-btn {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      width: 100%;
+      margin-top: 20px;
+      cursor: pointer;
+    }
+    .sales-summary {
+      margin-top: 20px;
+      padding: 20px;
+      background: #f8f9fa;
+      border-radius: 5px;
+    }
+    .date-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .payment-methods {
+      display: flex;
+      gap: 10px;
+      margin: 10px 0;
+    }
+    .payment-btn {
+      flex: 1;
+      padding: 10px;
+      border: 2px solid #007bff;
+      border-radius: 5px;
+      background: white;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .payment-btn.selected {
+      background: #007bff;
+      color: white;
+    }
+    .product-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .price-tag {
+      font-weight: bold;
+      color: #28a745;
+    }
+    .enter-sale-btn {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 15px 30px;
+      border-radius: 5px;
+      font-size: 1.2em;
+      cursor: pointer;
+      margin-bottom: 20px;
+      width: 100%;
+    }
+    .enter-sale-btn:hover {
+      background: #0056b3;
+    }
   </style>
 </head>
 <body>
