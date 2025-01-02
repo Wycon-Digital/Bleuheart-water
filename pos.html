@@ -170,7 +170,146 @@
       background: #0056b3;
     }
   </style>
-  <script src="https://apis.google.com/js/api.js"></script>
+  <script // Add these functions at the beginning of your script
+
+// Structure to hold the current data file
+let salesData = {
+  dailyLogs: {},
+  transactions: []
+};
+
+// Function to load data from GitHub
+async function loadDataFromGitHub() {
+  try {
+    const response = await fetch('https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/sales_data.json');
+    if (response.ok) {
+      salesData = await response.json();
+    }
+  } catch (error) {
+    console.error('Error loading data:', error);
+    // If file doesn't exist yet, we'll create it with first transaction
+  }
+}
+
+// Function to format current date as YYYY-MM-DD
+function getFormattedDate() {
+  const now = new Date();
+  return now.toISOString().split('T')[0];
+}
+
+// Modified saveToLog function
+async function saveToLog(saleData) {
+  const currentDate = getFormattedDate();
+  
+  // Initialize daily log if it doesn't exist
+  if (!salesData.dailyLogs[currentDate]) {
+    salesData.dailyLogs[currentDate] = {
+      totalAmount: 0,
+      transactions: 0,
+      salesBySize: {
+        '20': { quantity: 0, amount: 0 },
+        '10': { quantity: 0, amount: 0 },
+        '5': { quantity: 0, amount: 0 },
+        '1': { quantity: 0, amount: 0 }
+      },
+      paymentMethods: {
+        cash: { count: 0, amount: 0 },
+        mpesa: { count: 0, amount: 0 }
+      }
+    };
+  }
+
+  // Update daily logs
+  const dailyLog = salesData.dailyLogs[currentDate];
+  dailyLog.totalAmount += saleData.total;
+  dailyLog.transactions += 1;
+
+  // Update sales by size
+  saleData.items.forEach(item => {
+    dailyLog.salesBySize[item.liters].quantity += item.quantity;
+    dailyLog.salesBySize[item.liters].amount += item.total;
+  });
+
+  // Update payment methods
+  dailyLog.paymentMethods[saleData.paymentMethod].count += 1;
+  dailyLog.paymentMethods[saleData.paymentMethod].amount += saleData.total;
+
+  // Add transaction to list
+  salesData.transactions.push({
+    ...saleData,
+    date: currentDate
+  });
+
+  // Save to GitHub via API
+  try {
+    const token = localStorage.getItem('github_token'); // You'll need to set this up
+    const content = btoa(JSON.stringify(salesData, null, 2)); // Base64 encode the content
+
+    const response = await fetch('https://api.github.com/repos/YOUR_USERNAME/YOUR_REPO/contents/sales_data.json', {
+      method: 'PUT',
+      headers: {
+        'Authorization': `token ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        message: `Update sales data - ${new Date().toISOString()}`,
+        content: content,
+        sha: await getFileSHA() // You'll need to implement this
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to save to GitHub');
+    }
+
+    // Update local storage as backup
+    localStorage.setItem('salesData', JSON.stringify(salesData));
+    
+  } catch (error) {
+    console.error('Error saving to GitHub:', error);
+    // Save to local storage as fallback
+    localStorage.setItem('salesData', JSON.stringify(salesData));
+    alert('Warning: Could not save to GitHub. Data saved locally.');
+  }
+}
+
+// Function to get file SHA (needed for GitHub API)
+async function getFileSHA() {
+  try {
+    const response = await fetch('https://api.github.com/repos/YOUR_USERNAME/YOUR_REPO/contents/sales_data.json');
+    if (response.ok) {
+      const data = await response.json();
+      return data.sha;
+    }
+    return null; // Return null if file doesn't exist yet
+  } catch (error) {
+    console.error('Error getting SHA:', error);
+    return null;
+  }
+}
+
+// Modified initialization code
+document.addEventListener('DOMContentLoaded', async function () {
+  // Load existing data
+  await loadDataFromGitHub();
+  
+  // If there's data in local storage and GitHub load failed, use local data
+  const localData = localStorage.getItem('salesData');
+  if (localData && Object.keys(salesData.dailyLogs).length === 0) {
+    salesData = JSON.parse(localData);
+  }
+
+  // Initialize the current day's data if needed
+  const currentDate = getFormattedDate();
+  if (salesData.dailyLogs[currentDate]) {
+    dailySales = salesData.dailyLogs[currentDate];
+  }
+
+  document.getElementById('enter-sale-btn').addEventListener('click', toggleProductList);
+  updateDateTime();
+  updateDailySummary();
+});
+    src="https://apis.google.com/js/api.js"></script>
 </head>
 <body onload>
   <div class="container">
