@@ -392,7 +392,9 @@ const GITHUB_CONFIG = {
   path: 'sales_data.json',
   branch: 'main'
 };
-
+const users = {
+  'pavilion':'0900'
+    };
 async function getGitHubToken() {
   let token = localStorage.getItem('github_token');
   if (!token) {
